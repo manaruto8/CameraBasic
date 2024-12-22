@@ -4,6 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.pm.PackageManager
+import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCharacteristics
 import android.net.Uri
 import android.os.Build
@@ -15,7 +17,6 @@ import android.view.*
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.camera.camera2.internal.compat.workaround.ForceCloseCaptureSession.OnConfigured
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.core.*
 import androidx.camera.core.ImageCapture.FLASH_MODE_AUTO
@@ -24,8 +25,6 @@ import androidx.camera.core.ImageCapture.FLASH_MODE_ON
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.camera.video.VideoCapture
-import androidx.camera.view.PreviewView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.LifecycleOwner
@@ -52,7 +51,8 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
     private var videoCapture: VideoCapture<Recorder>?=null
     private var currentRecording: Recording? = null
     private var camera: Camera? = null
-    private var ratio = AspectRatio.RATIO_4_3
+    private var aspectRatio = AspectRatio.RATIO_4_3
+    private var ratio = CameraConfig.CameraRatio.RECTANGLE_4_3
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoStatus = CameraConfig.VideoState.PREVIEW
     private var mode = CameraConfig.CameraMode.PHOTO
@@ -135,17 +135,21 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
             }
         }
         mBinding.tvRatio.setOnClickListener {
-            ratio = if (ratio == AspectRatio.RATIO_4_3) {
+            aspectRatio = if (aspectRatio == AspectRatio.RATIO_4_3) {
                 mBinding.tvRatio.text = "16:9"
+                ratio = CameraConfig.CameraRatio.RECTANGLE_16_9
                 AspectRatio.RATIO_16_9
-            } else if (ratio == AspectRatio.RATIO_16_9) {
+            } else if (aspectRatio == AspectRatio.RATIO_16_9) {
                 mBinding.tvRatio.text = "全屏"
+                ratio = CameraConfig.CameraRatio.FUll
                 -1
-            } else if (ratio == -1) {
+            } else if (aspectRatio == -1) {
                 mBinding.tvRatio.text = "1:1"
+                ratio = CameraConfig.CameraRatio.SQUARE
                 -2
             } else {
                 mBinding.tvRatio.text = "4:3"
+                ratio = CameraConfig.CameraRatio.RECTANGLE_4_3
                 AspectRatio.RATIO_4_3
             }
             bindPreview()
@@ -238,16 +242,16 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
         val screenWidth = d.widthPixels
         val screenHeight = d.heightPixels
         var viewRatio = 0f
-        if (ratio == AspectRatio.RATIO_4_3) {
+        if (aspectRatio == AspectRatio.RATIO_4_3) {
             viewRatio = 4f/3
         }
-        if (ratio == AspectRatio.RATIO_16_9) {
+        if (aspectRatio == AspectRatio.RATIO_16_9) {
             viewRatio = 16f/9
         }
-        if (ratio == -1) {
+        if (aspectRatio == -1) {
             viewRatio = screenHeight.toFloat()/screenWidth
         }
-        if (ratio == -2) {
+        if (aspectRatio == -2) {
             viewRatio = screenWidth.toFloat()/screenWidth
         }
         val height = screenWidth * viewRatio
@@ -261,19 +265,32 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
             .build()
 
         val selector = selectExternalOrBestCamera(cameraProvider)
-
-        if (ratio >= 0 ) {
+//        val cameraConfig = camera2Info?.getCameraCharacteristic(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+//        val previewSize=CameraUtils.chooseSize(cameraConfig!!.getOutputSizes(SurfaceTexture::class.java),windowManager.defaultDisplay.height, windowManager.defaultDisplay.width, ratio.size, true)
+//        val pictureSize=CameraUtils.chooseSize(cameraConfig!!.getOutputSizes(ImageFormat.JPEG),windowManager.defaultDisplay.height, windowManager.defaultDisplay.width, ratio.size, false)
+//
+//        preview = Preview.Builder()
+//            .setTargetRotation(mBinding.cameraPreview.display.rotation)
+//            .setTargetResolution(Size(previewSize.width,previewSize.height))
+//            .build()
+//
+//        imageCapture = ImageCapture.Builder()
+//            .setTargetRotation(mBinding.cameraPreview.display.rotation)
+//            .setTargetResolution(Size(pictureSize.width,pictureSize.height))
+//            .setFlashMode(flashMode)
+//            .build()
+        if (aspectRatio >= 0 ) {
             preview = Preview.Builder()
                 .setTargetRotation(mBinding.cameraPreview.display.rotation)
-                .setTargetAspectRatio(ratio)
+                .setTargetAspectRatio(aspectRatio)
                 .build()
 
             imageCapture = ImageCapture.Builder()
                 .setTargetRotation(mBinding.cameraPreview.display.rotation)
-                .setTargetAspectRatio(ratio)
+                .setTargetAspectRatio(aspectRatio)
                 .setFlashMode(flashMode)
                 .build()
-        } else if (ratio == -1){
+        } else if (aspectRatio == -1){
             preview = Preview.Builder()
                 .setTargetRotation(mBinding.cameraPreview.display.rotation)
                 .setTargetResolution(Size(d.widthPixels,d.heightPixels))
@@ -284,7 +301,7 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
                 .setTargetResolution(Size(d.widthPixels,d.heightPixels))
                 .setFlashMode(flashMode)
                 .build()
-        } else if (ratio == -2){
+        } else if (aspectRatio == -2){
             preview = Preview.Builder()
                 .setTargetRotation(mBinding.cameraPreview.display.rotation)
                 .setTargetResolution(Size(d.widthPixels,d.widthPixels))
@@ -335,7 +352,7 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
         contentValue.put(MediaStore.Images.Media.DISPLAY_NAME,"camerax_jpg_${currentDate}")
         contentValue.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contentValue.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraBasic/CameraX")
+            contentValue.put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/CameraBasic/CameraX")
         }
         contentValue.put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis())
         val outputFileOptions = ImageCapture
@@ -351,7 +368,7 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
                 }
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    Log.e(TAG, "takePicture.onImageSaved: }" )
+                    Log.e(TAG, "takePicture.onImageSaved: " )
                     type = 0
                     uri = outputFileResults.savedUri
                     CameraUtils.showThumbnail(this@CameraXActivity, uri, mBinding.ivAlbum)
@@ -369,7 +386,7 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
         contentValue.put(MediaStore.Video.Media.DISPLAY_NAME,"camerax_video_${currentDate}")
         contentValue.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contentValue.put(MediaStore.Video.Media.RELATIVE_PATH, "Pictures/CameraBasic/CameraX")
+            contentValue.put(MediaStore.Video.Media.RELATIVE_PATH, "DCIM/CameraBasic/CameraX")
         }
         contentValue.put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis())
         val mediaStoreOutput = MediaStoreOutputOptions.Builder(
@@ -447,9 +464,9 @@ class CameraXActivity : BaseActivity<ActivityCameraxBinding>() {
             Log.e(TAG, "initCamera:id ${it.cameraId}" )
             Log.e(TAG, "initCamera:facing ${it.getCameraCharacteristic(CameraCharacteristics.LENS_FACING)}" )
             Log.e(TAG, "initCamera:API ${it.getCameraCharacteristic(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)}" )
-            Log.e(TAG, "initCamera:zoom ${it.getCameraCharacteristic(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)}" )
-            Log.e(TAG, "initCamera:resolution ${it.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)}" )
-            Log.e(TAG, "initCamera:flash ${it.getCameraCharacteristic(CameraCharacteristics.FLASH_INFO_AVAILABLE)}" )
+//            Log.e(TAG, "initCamera:zoom ${it.getCameraCharacteristic(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)}" )
+//            Log.e(TAG, "initCamera:resolution ${it.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)}" )
+//            Log.e(TAG, "initCamera:flash ${it.getCameraCharacteristic(CameraCharacteristics.FLASH_INFO_AVAILABLE)}" )
         }
 
         return when {

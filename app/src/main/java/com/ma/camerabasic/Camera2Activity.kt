@@ -352,9 +352,9 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
             Log.e(TAG, "initCamera:id $id" )
             Log.e(TAG, "initCamera:facing ${characteristics.get(CameraCharacteristics.LENS_FACING)}" )
             Log.e(TAG, "initCamera:API ${characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)}" )
-            Log.e(TAG, "initCamera:zoom ${characteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)}" )
-            Log.e(TAG, "initCamera:resolution ${characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)}" )
-            Log.e(TAG, "initCamera:flash ${characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)}" )
+//            Log.e(TAG, "initCamera:zoom ${characteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)}" )
+//            Log.e(TAG, "initCamera:resolution ${characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)}" )
+//            Log.e(TAG, "initCamera:flash ${characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)}" )
         }
 
         characteristics=cameraManager.getCameraCharacteristics(cameraId)
@@ -665,7 +665,7 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
     private fun savePicture(image: Image) {
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
-        file = getOutputMediaFile("jpg")
+        file =CameraUtils.getOutputMediaFile("Camera2", "jpg")
         FileOutputStream(file).use {
             it.write(bytes)
             it.close()
@@ -690,7 +690,7 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
         }
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
-        FileOutputStream(getOutputMediaFile("raw")).use { it.write(bytes) }
+        FileOutputStream(CameraUtils.getOutputMediaFile("Camera2", "raw")).use { it.write(bytes) }
 
     }
 
@@ -700,7 +700,7 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
             return
         }
         val bytes = CameraUtils.YUV_420_888toNV21(image)
-        FileOutputStream(getOutputMediaFile("yuv")).use { it.write(bytes) }
+        FileOutputStream(CameraUtils.getOutputMediaFile("Camera2", "yuv")).use { it.write(bytes) }
     }
 
 
@@ -773,7 +773,7 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
 
     private fun createRecorder(surface: Surface, mediaFps:Int, mediaSize:  Size) = MediaRecorder().apply {
 
-        file = getOutputMediaFile("mp4")
+        file = CameraUtils.getOutputMediaFile("Camera2", "mp4")
 
         setAudioSource(MediaRecorder.AudioSource.MIC)
         setVideoSource(MediaRecorder.VideoSource.SURFACE)
@@ -791,28 +791,6 @@ class Camera2Activity : BaseActivity<ActivityCamera2Binding>() {
             setPreviewDisplay(surface)
         }
         prepare()
-    }
-
-
-    private fun getOutputMediaFile(format: String): File{
-        val mediaStorageDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-            "CameraBasic" + File.separator + "Camera2"
-        )
-        mediaStorageDir.apply {
-            if (!exists()) {
-                if (!mkdirs()) {
-                    Log.e(TAG, "failed to create directory")
-                    return mediaStorageDir
-                }
-            }
-        }
-
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-        return File(
-            mediaStorageDir.path + File.separator +
-                    "camera2_${format}_${timeStamp}.${format}"
-                    )
     }
 
     val job = lifecycleScope.launch {

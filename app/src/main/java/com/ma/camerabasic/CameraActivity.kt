@@ -340,7 +340,7 @@ class CameraActivity : BaseActivity<ActivityCameraBinding>(),Camera.PreviewCallb
     override fun onPictureTaken(p0: ByteArray?, p1: Camera?) {
         p1?.startPreview()
 
-        file = getOutputMediaFile("jpg")
+        file = CameraUtils.getOutputMediaFile("Camera1", "jpg")
 
         try {
             FileOutputStream(file).use {
@@ -380,7 +380,7 @@ class CameraActivity : BaseActivity<ActivityCameraBinding>(),Camera.PreviewCallb
                 }
                 val videoSize = CameraUtils.chooseSize(videoSizes.toTypedArray(),windowManager.defaultDisplay.height, windowManager.defaultDisplay.width, ratio.size, false)
                 Log.e(TAG, "startPreview bestVideoSize: ${videoSize.width} * ${videoSize.height}" )
-                file = getOutputMediaFile("mp4")
+                file = CameraUtils.getOutputMediaFile("Camera1", "mp4")
 
                 setAudioSource(MediaRecorder.AudioSource.CAMCORDER)
                 setVideoSource(MediaRecorder.VideoSource.CAMERA)
@@ -433,29 +433,6 @@ class CameraActivity : BaseActivity<ActivityCameraBinding>(),Camera.PreviewCallb
 
         CameraUtils.showThumbnail(this, file, mBinding.ivAlbum)
     }
-
-
-    private fun getOutputMediaFile(format: String): File{
-        val mediaStorageDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-            "CameraBasic" + File.separator + "Camera"
-        )
-        mediaStorageDir.apply {
-            if (!exists()) {
-                if (!mkdirs()) {
-                    Log.e(TAG, "failed to create directory")
-                    return mediaStorageDir
-                }
-            }
-        }
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-        return File(
-            mediaStorageDir.path + File.separator +
-                    "camera_${format}_${timeStamp}.${format}"
-        )
-    }
-
-
 
     private fun getCameraDisplayOrientation():Int{
         val info = Camera.CameraInfo()
